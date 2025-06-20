@@ -19,5 +19,3 @@ main().catch((error) => {
   console.error(error);
   process.exitCode = 1;
 });
-
-// Atmofi contract deployed to: 0xF8346e23BdE55C7692219a54CA95432E66046574
