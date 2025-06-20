@@ -3,7 +3,7 @@ import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useAccount } from 'wagmi';
 import './App.css';
 import { AtmofiDapp } from './components/AtmofiDapp';
-import { HistoryChart } from './components/HistoryChart'; // <-- IMPORT
+import { HistoryTable } from './components/HistoryTable'; // <-- CHANGE THIS IMPORT
 
 function App() {
   const { isConnected } = useAccount();
@@ -22,8 +22,8 @@ function App() {
           {isConnected ? (
             <>
               <AtmofiDapp />
-              {/* RENDER THE NEW CHART COMPONENT */}
-              <HistoryChart />
+              {/* RENDER THE NEW TABLE COMPONENT */}
+              <HistoryTable />
             </>
           ) : (
             <p>Please connect your wallet to interact with the AtmoFi dApp.</p>

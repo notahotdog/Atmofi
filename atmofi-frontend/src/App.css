@@ -146,11 +146,31 @@ body {
   color: #ff6b6b;
 }
 
-.history-chart-container {
+.history-container {
   width: 100%;
-  max-width: 650px; /* Match the main container width */
+  max-width: 650px;
   margin-top: 40px;
   padding: 20px;
   background-color: #282c34;
   border-radius: 8px;
+}
+
+.history-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 15px;
+}
+
+.history-table th, .history-table td {
+  padding: 12px 15px;
+  text-align: left;
+  border-bottom: 1px solid #444;
+}
+
+.history-table th {
+  color: #61dafb;
+}
+
+.history-table tbody tr:last-child td {
+  border-bottom: none;
 }

@@ -14,7 +14,7 @@ import { QueryClientProvider, QueryClient } from '@tanstack/react-query';
 // --- CONFIGURATION ---
 const config = getDefaultConfig({
   appName: 'AtmoFi',
-  projectId: 'PASTE_YOUR_WALLETCONNECT_PROJECT_ID_HERE',
+  projectId: 'aabc1e27cb8ab6afece8693ab4b9d882',
   chains: [sepolia], // We are focusing on the Sepolia testnet
   ssr: false, // Set to true if using a server-side rendering framework
 });

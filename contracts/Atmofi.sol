@@ -22,6 +22,7 @@ contract Atmofi {
     mapping(uint256 => Derivative) public derivatives;
     uint256 public nextDerivativeId;
     uint256[] public settledDerivativeIds;
+    uint256[] public allDerivativeIds;
 
     // --- CORRECTED SECTION ---
     AggregatorV3Interface internal immutable i_priceFeed;
@@ -58,6 +59,7 @@ contract Atmofi {
             beverageCompanyFunded: true
         });
         nextDerivativeId++;
+        allDerivativeIds.push(derivativeId);
         emit DerivativeCreated(derivativeId, msg.sender, beverageCompany);
     }
 
@@ -92,6 +94,26 @@ contract Atmofi {
             payable(winner).transfer(address(this).balance);
         }
         emit ContractSettled(derivativeId, settledTemperature, winner);
+    }
+
+    function getDerivativeHistory(uint256 limit) external view returns (Derivative[] memory) {
+    uint256 count = allDerivativeIds.length;
+
+    // --- THIS IS THE FIX ---
+    // If there are no derivatives, return an empty array immediately.
+    if (count == 0) {
+        return new Derivative[](0);
+    }
+    // --- END FIX ---
+
+    if (limit > count || limit == 0) {
+        limit = count;
+    }
+    Derivative[] memory history = new Derivative[](limit);
+    for (uint256 i = 0; i < limit; i++) {
+        history[i] = derivatives[allDerivativeIds[count - 1 - i]];
+    }
+    return history;
     }
 
     function getHistory(uint256 limit) external view returns (Derivative[] memory) {

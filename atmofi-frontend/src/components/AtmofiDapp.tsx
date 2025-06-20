@@ -7,16 +7,15 @@ import { parseEther, formatEther } from 'viem';
 import { ethers } from 'ethers';
 import AggregatorV3InterfaceAbi from '../abis/AggregatorV3Interface.json';
 
-type ViewState = 'CREATION' | 'FUNDING' | 'SETTLEMENT_PENDING' | 'SETTLED_COMPLETE';
+// Add new state for the improved user flow
+type ViewState = 'CREATION' | 'FUNDING' | 'SETTLEMENT_PENDING' | 'POST_SETTLEMENT';
 
 export function AtmofiDapp() {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { address } = useAccount();
 
-  // --- STATE MANAGEMENT ---
   const [view, setView] = useState<ViewState>('CREATION');
   const [activeDerivativeId, setActiveDerivativeId] = useState<bigint | null>(null);
-  const [settlementInfo, setSettlementInfo] = useState<{ winner: string; temp: string; } | null>(null);
   
   const [beverageCo, setBeverageCo] = useState('');
   const [payout, setPayout] = useState('');
@@ -24,10 +23,9 @@ export function AtmofiDapp() {
   const [strike, setStrike] = useState('');
   
   const [latestTxHash, setLatestTxHash] = useState<`0x${string}` | undefined>();
-  
-  // --- WAGMI HOOKS ---
-  const { writeContractAsync, isPending } = useWriteContract();
   const { data: receipt, isLoading, isSuccess, error: txError } = useWaitForTransactionReceipt({ hash: latestTxHash });
+
+  const { writeContractAsync, isPending } = useWriteContract();
 
   const { data: chainlinkFeedAddress } = useReadContract({
     ...atmofiContract,
@@ -53,7 +51,6 @@ export function AtmofiDapp() {
   const potentialInsurerProfit = premium ? parseFloat(premium) : 0;
   const potentialBeverageCoPayout = payout ? parseFloat(payout) : 0;
 
-  // --- TRANSACTION FUNCTIONS ---
   async function createDerivative(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     try {
@@ -116,16 +113,8 @@ export function AtmofiDapp() {
         setView('SETTLEMENT_PENDING');
         refetchDerivative();
       } else if (view === 'SETTLEMENT_PENDING') {
-        const iface = new ethers.Interface(atmofiContract.abi);
-        const settledLog = receipt.logs.map(log => {
-          try { return iface.parseLog(log) } catch { return null }
-        }).find(log => log?.name === "ContractSettled");
-        
-        if (settledLog) {
-          const { winner, settledTemperature } = settledLog.args;
-          setSettlementInfo({ winner, temp: settledTemperature.toString() });
-        }
-        setView('SETTLED_COMPLETE');
+        setView('POST_SETTLEMENT');
+        // The history table will automatically refetch and show the final state
       }
     }
   }, [isSuccess, receipt, view, refetchDerivative]);
@@ -185,38 +174,17 @@ export function AtmofiDapp() {
       </button>
     </div>
   );
-
-  const renderSettledCompleteView = () => {
-    if (!settlementInfo) {
-      return (
-        <div className="contract-view">
-          <h3>Derivative #{activeDerivativeId?.toString()} Settled!</h3>
-          <div className="outcome-preview">
-            <p>✅ Transaction confirmed.</p>
-            <p>Processing settlement outcome...</p>
-          </div>
-        </div>
-      );
-    }
-    let winnerName = "Unknown";
-    if (settlementInfo.winner.toLowerCase() === beverageCo.toLowerCase()) {
-      winnerName = "The Beverage Company";
-    } else if (settlementInfo.winner.toLowerCase() === address?.toLowerCase()) {
-      winnerName = "The Insurer (You)";
-    }
-    return (
+  
+  const renderPostSettlementView = () => (
     <div className="contract-view">
-        <h3>Derivative #{activeDerivativeId?.toString()} Settled!</h3>
+        <h3>Settlement Submitted!</h3>
         <div className="outcome-preview">
-          <h5>Final Outcome</h5>
-          <p>Settled "Temperature": <strong>${settlementInfo.temp}</strong></p>
-          <p>Winner: <strong className="winner-address">{winnerName}</strong></p>
-          <p>The contract balance has been transferred to the winner.</p>
+          <p>✅ Your transaction to settle the derivative was successful.</p>
+          <p>The final outcome will appear in the "Derivative History" table below shortly as it updates.</p>
         </div>
         <button onClick={() => { 
           setView('CREATION'); 
           setActiveDerivativeId(null); 
-          setSettlementInfo(null); 
           setLatestTxHash(undefined);
           setBeverageCo('');
           setPayout('');
@@ -224,7 +192,7 @@ export function AtmofiDapp() {
           setStrike('');
         }}>Create Another Derivative</button>
     </div>
-  )};
+  );
 
   const renderTransactionStatus = () => (
     <div className="tx-status">
@@ -242,7 +210,7 @@ export function AtmofiDapp() {
       {view === 'CREATION' && renderCreationView()}
       {view === 'FUNDING' && renderFundingView()}
       {view === 'SETTLEMENT_PENDING' && renderSettlementView()}
-      {view === 'SETTLED_COMPLETE' && renderSettledCompleteView()}
+      {view === 'POST_SETTLEMENT' && renderPostSettlementView()}
       {renderTransactionStatus()}
     </div>
   );
