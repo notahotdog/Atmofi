@@ -33,7 +33,7 @@ contract Atmofi is VRFConsumerBaseV2 {
     
     VRFCoordinatorV2Interface private immutable i_vrfCoordinator;
     bytes32 private immutable i_keyHash;
-    uint64 private immutable i_subscriptionId; // CORRECTED BACK TO uint64
+    uint256 private immutable i_subscriptionId;
     
     uint32 private constant CALLBACK_GAS_LIMIT = 100000;
     uint16 private constant REQUEST_CONFIRMATIONS = 3;
@@ -47,7 +47,7 @@ contract Atmofi is VRFConsumerBaseV2 {
     event RandomnessRequested(uint256 indexed requestId, uint256 indexed derivativeId);
     event ContractSettled(uint256 indexed derivativeId, address indexed winner, uint256 settledTemperature);
 
-    constructor(address _priceFeedAddress, uint64 _vrfSubscriptionId) // CORRECTED BACK TO uint64
+    constructor(address _priceFeedAddress, uint256 _vrfSubscriptionId) 
         VRFConsumerBaseV2(0x8103B0A8A00be2DDC778e6e7eaa21791Cd364625)
     {
         priceFeed = AggregatorV3Interface(_priceFeedAddress);
@@ -98,8 +98,11 @@ contract Atmofi is VRFConsumerBaseV2 {
         derivativeSettlementInitiated[derivativeId] = true;
         
         uint256 requestId = i_vrfCoordinator.requestRandomWords(
-            i_keyHash, i_subscriptionId, // This call now works because i_subscriptionId is a uint64
-            REQUEST_CONFIRMATIONS, CALLBACK_GAS_LIMIT, NUM_WORDS
+            i_keyHash, 
+            uint64(i_subscriptionId), // Explicitly cast to uint64 for the function call
+            REQUEST_CONFIRMATIONS, 
+            CALLBACK_GAS_LIMIT, 
+            NUM_WORDS
         );
         vrfRequestToDerivativeId[requestId] = derivativeId;
         emit RandomnessRequested(requestId, derivativeId);
