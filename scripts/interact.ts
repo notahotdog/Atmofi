@@ -4,7 +4,7 @@ import { ethers } from "hardhat";
 
 async function main() {
   // --- CONFIGURATION ---
-  const atmofiContractAddress = "0x808585feAC7710A3E7bc06e3e52f061359F56E30"; // <-- PASTE YOUR ADDRESS HERE
+  const atmofiContractAddress = "0xCFAF56A61A2E892069FfDa71df2ed9F74eaA72aF"; // <-- PASTE YOUR ADDRESS HERE
   const [deployer] = await ethers.getSigners(); // This will be our "insurer"
 
   // We'll create a new random wallet to act as the "beverage company"

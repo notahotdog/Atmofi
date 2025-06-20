@@ -1,138 +1,84 @@
 # AtmoFi Weather Derivatives dApp
 
-**Version 1.0.0**
-**Last Updated: June 20, 2025**
+**Version 2.0.0**
+**Last Updated: June 21, 2025**
 
 ## 1. Project Overview
 
-AtmoFi is a decentralized application (dApp) that allows users to create and participate in peer-to-peer parametric derivatives. Instead of traditional insurance, which can be slow and subjective, AtmoFi uses smart contracts and live data from Chainlink oracles to create agreements that settle automatically, instantly, and transparently based on predefined data points.
+AtmoFi is a sophisticated decentralized application (dApp) that demonstrates a complete lifecycle for peer-to-peer parametric derivatives. It allows users to create and automatically settle financial contracts based on external data, secured by the Ethereum blockchain and powered by Chainlink's oracle network.
 
-While the concept is designed for real-world weather data, this MVP (Minimum Viable Product) uses the live **ETH/USD price feed** as a stand-in for temperature, demonstrating the full end-to-end functionality on the Sepolia testnet.
+This project is a fully functional Minimum Viable Product (MVP) deployed on the **Sepolia testnet**, showcasing advanced smart contract capabilities and a modern, reactive frontend.
 
-## 2. The Problem We Solve (The Use Case)
+## 2. The Core Concept (The Use Case)
 
-Imagine a **beverage company in Singapore**. Their sales are directly tied to the weather—hot days mean high sales, but an unseasonably cool week can significantly hurt their revenue.
+The application is built around a simple, real-world story:
 
-AtmoFi allows this beverage company to hedge against that risk. They can enter a financial agreement where they receive an automatic payout if the "temperature" (in our case, the ETH/USD price) drops below a certain level during a specific period.
+A **beverage company** in Singapore wants to hedge against the financial risk of unseasonably cool weather, which hurts their sales of cold drinks. They use AtmoFi to enter into a derivative contract with an **insurer**.
 
-This creates a simple, two-party contract:
-* **The Hedger (The Beverage Company):** Pays a small premium to protect against a financial loss from "cool" weather.
-* **The Counterparty (The Insurer):** Provides the collateral for the payout, betting that the weather will be normal or "hot," allowing them to collect the premium as profit.
+* **If the "weather" is cooler than a pre-agreed "strike temperature,"** the beverage company automatically receives a large payout from the insurer.
+* **If the "weather" is warmer,** the insurer keeps their collateral and also earns the premium paid by the beverage company.
 
-## 3. Technology Stack
+This creates a transparent, two-party financial agreement that executes automatically based on real-world data, without the need for a traditional intermediary.
 
-The AtmoFi project is a full-stack dApp built with modern, industry-standard tools.
+## 3. Key Features
 
-### Backend (On-Chain)
+This dApp integrates a powerful stack of Web3 technologies to create a truly autonomous system:
+
+* **Chainlink Data Feeds:** The contract uses live ETH/USD price data as a real-time, on-chain data source to determine settlement outcomes.
+* **Chainlink VRF (Verifiable Random Function):** To make the outcome more dynamic, a provably random number from Chainlink VRF is used as a multiplier during settlement, adding a layer of gamified unpredictability.
+* **Chainlink Automation:** The settlement process is fully autonomous. A "Custom Logic" Upkeep job monitors all active contracts and automatically triggers the settlement function for any derivative whose time period has expired. This removes the need for any user to manually execute the final step.
+* **Persistent History:** The frontend uses the browser's `localStorage` to save the creation transaction hash for each derivative, providing a persistent and verifiable link to the on-chain record on Etherscan.
+
+## 4. Development Simplifications & Demo Enhancements
+
+To create a robust and smooth MVP for demonstration purposes, we made several pragmatic simplifications:
+
+1.  **ETH/USD as a Proxy for Temperature:** Instead of sourcing real-world weather data (which is complex and not readily available on testnets), we use the live, reliable **Chainlink ETH/USD Data Feed**. In our dApp's narrative, a lower price represents "cooler" weather.
+2.  **UI-Simulated Settlement Status:** On-chain settlement can take time due to network congestion and VRF callback latency. To ensure a smooth demo experience, the **Derivative History table simulates the final "Settled" status on the frontend**. It fetches the true on-chain state once, and if a contract's end time has passed, it immediately displays it as "Settled" in the UI, even while the true on-chain transaction is confirming. This makes the UI feel instant and predictable.
+3.  **Local Transaction History:** The link between a derivative ID and its creation transaction hash is stored in the browser's `localStorage`. This is a simple and effective solution for an MVP. A full production system would use a more robust, decentralized solution like indexing contract events.
+
+## 5. Technology Stack
+
+### Backend (Smart Contract)
 * **Blockchain:** Ethereum (Sepolia Testnet)
-* **Smart Contract Language:** Solidity
-* **Development Environment:** Hardhat (for compiling, testing, and deploying)
-* **Oracle Service:** Chainlink Data Feeds (for live price data)
+* **Language:** Solidity
+* **Framework:** Hardhat
+* **Libraries:** OpenZeppelin Ownable, Chainlink Contracts (Data Feeds, VRF, Automation)
 
-### Frontend (Off-Chain)
-* **Framework:** React (using Vite for a fast development experience)
-* **Language:** TypeScript
-* **Web3 Connectivity:**
-    * `wagmi`: A powerful library of React Hooks for all blockchain interactions.
-    * `viem`: A lightweight and efficient Ethereum interface used by wagmi.
-    * `RainbowKit`: Provides a beautiful and user-friendly "Connect Wallet" button and modal.
-* **Charting Library:** `Recharts` for visualizing historical data.
+### Frontend (User Interface)
+* **Framework:** React (via Vite + TypeScript)
+* **Web3 Connectivity:** `wagmi`, `viem`
+* **Wallet Modal:** `RainbowKit`
+* **Charting:** `Recharts`
 
-## 4. Project Setup
+## 6. Project Setup
 
-To run this project, you will need to set up both the backend (smart contract) and the frontend.
+### A. Backend (`atmofi`)
+1.  **Install Dependencies:** `npm install`
+2.  **Create `.env` file:** Copy `.env.example` if it exists, and add your `SEPOLIA_RPC_URL` and `PRIVATE_KEY`.
+3.  **Compile:** `npx hardhat compile`
+4.  **Deploy:**
+    * Update the `vrfSubscriptionId` in `scripts/deploy.ts` with your ID from the [Chainlink VRF Dashboard](https://vrf.chain.link/sepolia).
+    * Run `npx hardhat run scripts/deploy.ts --network sepolia`.
+5.  **Post-Deploy:** Add the new contract address as a "consumer" on your VRF subscription page. Register a new "Custom Logic" upkeep on the [Chainlink Automation Dashboard](https://automation.chain.link/sepolia), pointing it to your new contract address.
 
-### A. Backend Setup (Hardhat)
+### B. Frontend (`atmofi-frontend`)
+1.  **Install Dependencies:** `npm install`
+2.  **Configure Contract:** Update `src/contract.ts` with the new contract address from the deployment step. Ensure the ABI in `src/abis` is up-to-date.
+3.  **Run Locally:** `npm run dev`
 
-This sets up the environment for compiling and deploying the smart contract.
+## 7. Example User Flow
 
-1.  **Prerequisites:** Ensure you have Node.js and npm installed.
-2.  **Clone & Install:**
-    ```bash
-    # This assumes you have the project in a directory called 'atmofi-evm'
-    cd atmofi-evm
-    npm install
-    ```
-3.  **Environment Variables:** Create a `.env` file in the `atmofi-evm` root directory and add your credentials. This is needed for deployment.
-    ```env
-    SEPOLIA_RPC_URL="YOUR_ALCHEMY_HTTPS_URL"
-    PRIVATE_KEY="YOUR_METAMASK_PRIVATE_KEY"
-    ```
-4.  **Compile & Deploy:**
-    ```bash
-    # Compile the contract
-    npx hardhat compile
-
-    # Deploy to Sepolia testnet
-    npx hardhat run scripts/deploy.ts --network sepolia
-    ```
-    After deployment, copy the new contract address.
-
-### B. Frontend Setup (React App)
-
-This sets up the user interface.
-
-1.  **Prerequisites:** This guide assumes you have started the frontend from the official Moralis boilerplate (`web3-dapp-boilerplate`) and named the project `atmofi-frontend`.
-2.  **Install Dependencies:**
-    ```bash
-    cd atmofi-frontend
-    npm install
-    ```
-3.  **Contract Configuration:**
-    * Copy the ABI from `atmofi-evm/artifacts/contracts/Atmofi.sol/Atmofi.json` into `atmofi-frontend/src/abis/Atmofi.json`.
-    * Update `atmofi-frontend/src/contract.ts` with the **new contract address** from your deployment step.
-4.  **Run the Frontend:**
-    ```bash
-    npm run dev
-    ```
-    The application will be available at `http://localhost:5173` (or a similar port).
-
-## 5. Example User Flow: A Live Walkthrough
-
-Here’s how a user would interact with the dApp. For this example, we'll assume the live ETH/USD price is approximately **$2,550**.
-
-#### Step 1: The Insurer Creates the Contract
-
-An insurer (the user who has connected their wallet) wants to earn a premium by betting that the price will stay high.
-
-1.  **Connect Wallet:** The insurer connects their MetaMask wallet to the dApp. The wallet is on the **Sepolia Testnet**.
-2.  **Observe Live Data:** They see the live price is **$2,550**.
-3.  **Fill Out the Form:**
-    * **Beverage Co. Address:** The insurer enters the address of the counterparty they are making the deal with (e.g., `0x95222290dd7278aa3ddd389cc1e1d165cc4bafe5`).
-    * **Premium:** They set the premium they want to earn, e.g., `0.01` ETH.
-    * **Payout:** They set the collateral they are willing to risk, e.g., `0.1` ETH.
-    * **Strike Price:** They bet the price will stay high, so they agree to a strike price of `2500`.
-4.  **Review the Outcome Preview:** The UI shows: "🔴 Current conditions favor the **Insurer**. They would profit 0.01 ETH," because the live price ($2,550) is *above* the strike price ($2,500).
-5.  **Create Derivative:** The insurer clicks the button. MetaMask pops up, and they confirm the transaction, which sends the **0.01 ETH premium** to the new smart contract.
-
-#### Step 2: The Insurer Funds the Contract
-
-After the transaction confirms, the UI automatically switches to the "Funding View."
-
-1.  **See Contract Status:** The UI shows "Status: **Pending Funding**".
-2.  **Deposit Collateral:** The insurer clicks the "Deposit Collateral" button. MetaMask pops up, and they confirm, sending the **0.1 ETH payout amount** to the contract.
-
-The contract is now fully funded and active. The total balance held by the smart contract is 0.11 ETH.
-
-#### Step 3: Settlement
-
-The contract's duration is set to a short period for testing. After this time passes, the "Settle Contract" button becomes enabled.
-
-1.  **Anyone can initiate settlement.** The insurer (or anyone) returns to the dApp and clicks "Settle Contract." MetaMask pops up to confirm sending the transaction (paying only a small gas fee).
-2.  **The Contract Acts:**
-    * The `settleContract` function is called.
-    * It immediately asks the Chainlink oracle for the current ETH/USD price. Let's say the price has dropped to **$2,480**.
-    * The contract compares: **Is $2,480 (settled price) < $2,500 (strike price)?** Yes, it is.
-    * The condition is met, so the **Beverage Company wins**.
-3.  **The Payout:** The smart contract automatically transfers its entire balance (0.11 ETH) to the winner's address (`0x9522...`).
-
-#### Step 4: View the Outcome
-
-The UI automatically updates to the "Settled View."
-
-1.  **Final Outcome:** The UI shows the results:
-    * Settled "Temperature": **$2480**
-    * Winner: **The Beverage Company**
-2.  **History Chart:** The new outcome appears on the history chart at the bottom of the page, showing a visual record of the settled derivative.
-
-This flow demonstrates a complete, transparent, and automated financial agreement, all handled by on-chain logic and real-world data.
+1.  **Connect Wallet:** The user (acting as the "Insurer") connects their MetaMask wallet on the Sepolia testnet.
+2.  **Observe Live Data:** The UI displays the live ETH/USD price, which is polling every 5 seconds.
+3.  **Create Derivative:** The Insurer fills out the form:
+    * Specifies the `Beverage Co. Address`.
+    * Sets a `Premium` (e.g., 0.01 ETH), which they will pay.
+    * Sets a `Payout` (e.g., 0.1 ETH), which is their collateral.
+    * Sets a `Strike Price`.
+    * The UI shows a live preview of who would win under current conditions.
+    * They click "Create Derivative" and approve the transaction, paying the premium.
+4.  **Fund Derivative:** The UI automatically switches to the "Funding" view. The Insurer clicks "Deposit Collateral" and approves the transaction to send the payout amount to the contract. The History Table now shows this derivative's status as "Active".
+5.  **Wait for Settlement:** The contract now waits for its duration to expire (e.g., 2 minutes for testing).
+6.  **Autonomous Settlement:** Once the end time passes, the user does nothing. The off-chain Chainlink Automation network detects the expired contract, calls our `settleContract` function, which in turn requests a random number from Chainlink VRF.
+7.  **View Outcome:** After a few moments, the VRF callback finalizes the settlement on-chain. The History Table on the frontend, which polls for data every 5 seconds, automatically updates to show the final "Settled" status and the outcome.
