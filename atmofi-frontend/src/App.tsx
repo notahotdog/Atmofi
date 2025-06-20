@@ -2,32 +2,36 @@
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useAccount } from 'wagmi';
 import './App.css';
-import { AtmofiDapp } from './components/AtmofiDapp'; // <-- IMPORT
+import { AtmofiDapp } from './components/AtmofiDapp';
+import { HistoryChart } from './components/HistoryChart'; // <-- IMPORT
 
 function App() {
   const { isConnected } = useAccount();
 
   return (
-  <div className="App">
-    {/* We wrap everything in a new container */}
-    <div className="App-container"> 
-      <header className="App-header">
-        <h1>AtmoFi Weather Derivatives</h1>
-        <div className="connect-button-container">
-          <ConnectButton />
-        </div>
-      </header>
+    <div className="App">
+      <div className="App-container"> 
+        <header className="App-header">
+          <h1>AtmoFi Weather Derivatives</h1>
+          <div className="connect-button-container">
+            <ConnectButton />
+          </div>
+        </header>
 
-      <main className="App-main">
-        {isConnected ? (
-          <AtmofiDapp />
-        ) : (
-          <p>Please connect your wallet to interact with the AtmoFi dApp.</p>
-        )}
-      </main>
+        <main className="App-main">
+          {isConnected ? (
+            <>
+              <AtmofiDapp />
+              {/* RENDER THE NEW CHART COMPONENT */}
+              <HistoryChart />
+            </>
+          ) : (
+            <p>Please connect your wallet to interact with the AtmoFi dApp.</p>
+          )}
+        </main>
+      </div>
     </div>
-  </div>
-);
+  );
 }
 
 export default App;

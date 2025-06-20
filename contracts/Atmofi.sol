@@ -21,6 +21,7 @@ contract Atmofi {
 
     mapping(uint256 => Derivative) public derivatives;
     uint256 public nextDerivativeId;
+    uint256[] public settledDerivativeIds;
 
     // --- CORRECTED SECTION ---
     AggregatorV3Interface internal immutable i_priceFeed;
@@ -80,6 +81,7 @@ contract Atmofi {
         int256 settledTemperature = price / 10**8;
 
         derivative.state = DerivativeState.Settled;
+        settledDerivativeIds.push(derivativeId);
         address winner;
 
         if (settledTemperature < derivative.strikeTemperature) {
@@ -90,5 +92,17 @@ contract Atmofi {
             payable(winner).transfer(address(this).balance);
         }
         emit ContractSettled(derivativeId, settledTemperature, winner);
+    }
+
+    function getHistory(uint256 limit) external view returns (Derivative[] memory) {
+    uint256 count = settledDerivativeIds.length;
+    if (limit > count) {
+        limit = count;
+    }
+    Derivative[] memory history = new Derivative[](limit);
+    for (uint256 i = 0; i < limit; i++) {
+        history[i] = derivatives[settledDerivativeIds[count - 1 - i]];
+    }
+    return history;
     }
 }

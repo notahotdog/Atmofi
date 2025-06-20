@@ -2,6 +2,6 @@
 import abi from './abis/Atmofi.json';
 
 export const atmofiContract = {
-  address: '0x88592a74EA11414cC58F0fdaD980a5088d446f80', // <-- PASTE YOUR SEPOLIA ADDRESS
+  address: '0x48f9029ea6AB5202eA95B0b191a524f473487382', // <-- PASTE YOUR SEPOLIA ADDRESS
   abi: abi.abi,
 } as const;

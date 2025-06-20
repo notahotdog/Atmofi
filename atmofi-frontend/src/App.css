@@ -145,3 +145,12 @@ body {
 .error-message {
   color: #ff6b6b;
 }
+
+.history-chart-container {
+  width: 100%;
+  max-width: 650px; /* Match the main container width */
+  margin-top: 40px;
+  padding: 20px;
+  background-color: #282c34;
+  border-radius: 8px;
+}
