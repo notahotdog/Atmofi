@@ -8,7 +8,9 @@ function App() {
   const { isConnected } = useAccount();
 
   return (
-    <div className="App">
+  <div className="App">
+    {/* We wrap everything in a new container */}
+    <div className="App-container"> 
       <header className="App-header">
         <h1>AtmoFi Weather Derivatives</h1>
         <div className="connect-button-container">
@@ -18,14 +20,14 @@ function App() {
 
       <main className="App-main">
         {isConnected ? (
-          // RENDER OUR NEW COMPONENT
           <AtmofiDapp />
         ) : (
           <p>Please connect your wallet to interact with the AtmoFi dApp.</p>
         )}
       </main>
     </div>
-  );
+  </div>
+);
 }
 
 export default App;
