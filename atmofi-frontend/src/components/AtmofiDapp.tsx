@@ -8,7 +8,7 @@ import { ethers } from 'ethers';
 import AggregatorV3InterfaceAbi from '../abis/AggregatorV3Interface.json';
 import { HistoryTable } from './HistoryTable';
 
-type ViewState = 'CREATION' | 'FUNDING' | 'SETTLEMENT_PENDING' | 'POST_SETTLEMENT';
+type ViewState = 'CREATION' | 'FUNDING' | 'SETTLEMENT_PENDING' | 'AWAITING_RANDOMNESS' | 'POST_SETTLEMENT';
 type TxHistory = { [derivativeId: string]: `0x${string}` };
 
 export function AtmofiDapp() {
@@ -26,14 +26,9 @@ export function AtmofiDapp() {
   const [txHistory, setTxHistory] = useState<TxHistory>({});
 
   const { writeContractAsync, isPending } = useWriteContract();
-  const { data: receipt, isLoading: isTxLoading, isSuccess: isTxSuccess, error: txError } = useWaitForTransactionReceipt({ hash: latestTxHash });
+  const { data: receipt, isLoading: isTxLoading, isSuccess: isTxSuccess } = useWaitForTransactionReceipt({ hash: latestTxHash });
 
-  const { 
-    data: history, 
-    error: historyError, 
-    isLoading: isHistoryLoading, 
-    refetch: refetchHistory 
-  } = useReadContract({
+  const { data: history, refetch: refetchHistory } = useReadContract({
     ...atmofiContract,
     functionName: 'getDerivativeHistory',
     args: [10n],
@@ -56,7 +51,7 @@ export function AtmofiDapp() {
     ...atmofiContract,
     functionName: 'derivatives',
     args: [activeDerivativeId!],
-    query: { enabled: activeDerivativeId !== null },
+    query: { enabled: activeDerivativeId !== null, refetchInterval: 5000 },
   });
   
   const livePrice = livePriceData ? Number(livePriceData[1]) / 10**8 : 0;
@@ -69,23 +64,26 @@ export function AtmofiDapp() {
   useEffect(() => {
     if (isTxSuccess && receipt?.status === 'success') {
       refetchHistory();
-      
       if (view === 'CREATION' && activeDerivativeId !== null) {
         const newHistory = { ...txHistory, [activeDerivativeId.toString()]: receipt.transactionHash };
         setTxHistory(newHistory);
         localStorage.setItem('atmofiTxHistory', JSON.stringify(newHistory));
         setView('FUNDING');
         refetchDerivative();
-      } 
-      else if (view === 'FUNDING') {
+      } else if (view === 'FUNDING') {
         setView('SETTLEMENT_PENDING');
         refetchDerivative();
-      } 
-      else if (view === 'SETTLEMENT_PENDING') {
-        setView('POST_SETTLEMENT');
+      } else if (view === 'SETTLEMENT_PENDING') {
+        setView('AWAITING_RANDOMNESS');
       }
     }
   }, [isTxSuccess, receipt]);
+
+  useEffect(() => {
+    if (view === 'AWAITING_RANDOMNESS' && activeDerivative?.state === 2) {
+      setView('POST_SETTLEMENT');
+    }
+  }, [activeDerivative, view]);
 
   async function createDerivative(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -94,18 +92,13 @@ export function AtmofiDapp() {
       const contract = new ethers.Contract(atmofiContract.address, atmofiContract.abi, provider);
       const nextId = await contract.nextDerivativeId() as bigint;
       setActiveDerivativeId(nextId);
-      
       const hash = await writeContractAsync({
-        ...atmofiContract,
-        functionName: 'initialize',
+        ...atmofiContract, functionName: 'initialize',
         args: [beverageCo, parseEther(payout), BigInt(strike), 120],
         value: parseEther(premium),
       });
       setLatestTxHash(hash);
-    } catch (err) {
-      console.error('Error initializing derivative:', err);
-      setActiveDerivativeId(null);
-    }
+    } catch (err) { console.error('Error initializing derivative:', err); setActiveDerivativeId(null); }
   }
 
   async function fundDerivative() {
@@ -114,10 +107,8 @@ export function AtmofiDapp() {
       const payoutAmount = activeDerivative?.[3];
       if (!payoutAmount) return;
       const hash = await writeContractAsync({
-        ...atmofiContract,
-        functionName: 'fundInsurer',
-        args: [activeDerivativeId],
-        value: payoutAmount,
+        ...atmofiContract, functionName: 'fundInsurer',
+        args: [activeDerivativeId], value: payoutAmount,
       });
       setLatestTxHash(hash);
     } catch (err) { console.error('Error funding derivative:', err); }
@@ -127,17 +118,14 @@ export function AtmofiDapp() {
     if (activeDerivativeId === null) return;
     try {
       const hash = await writeContractAsync({
-        ...atmofiContract,
-        functionName: 'settleContract',
+        ...atmofiContract, functionName: 'settleContract',
         args: [activeDerivativeId],
       });
       setLatestTxHash(hash);
     } catch (err) { console.error('Error settling derivative:', err); }
   }
 
-// We add a 60-second buffer to account for clock drift between our browser and the blockchain
-  const GRACE_PERIOD_SECONDS = 60;
-  const canSettle = activeDerivative ? BigInt(Math.floor(Date.now() / 1000)) > (activeDerivative[5] + BigInt(GRACE_PERIOD_SECONDS)) : false;
+  const canSettle = activeDerivative ? BigInt(Math.floor(Date.now() / 1000)) > activeDerivative[5] : false;
   const buttonDisabled = isPending || isTxLoading;
   const getButtonText = (defaultText: string) => {
     if (isPending) return 'Check Wallet...';
@@ -191,12 +179,25 @@ export function AtmofiDapp() {
     </div>
   );
   
+  const renderAwaitingRandomnessView = () => (
+    <div className="contract-view">
+      <h3>Derivative #{activeDerivativeId?.toString()}</h3>
+      <p>Status: <strong>Awaiting Randomness</strong></p>
+      <div className="outcome-preview">
+        <p>✅ Your request for a random number has been sent to the Chainlink network.</p>
+        <p>Please wait a few moments for the network to respond and finalize the settlement.</p>
+        <p>The history table below will update automatically with the final result.</p>
+      </div>
+      <button onClick={() => setView('CREATION')}>Create Another Derivative</button>
+    </div>
+  );
+
   const renderPostSettlementView = () => (
     <div className="contract-view">
-        <h3>Settlement Submitted!</h3>
+        <h3>Settlement Complete!</h3>
         <div className="outcome-preview">
-          <p>✅ Your transaction to settle the derivative was successful.</p>
-          <p>The final outcome will appear in the "Derivative History" table below as it updates automatically.</p>
+          <p>✅ The contract has been finalized.</p>
+          <p>Please see the "Derivative History" table for the final outcome.</p>
         </div>
         <button onClick={() => { 
           setView('CREATION'); setActiveDerivativeId(null); setLatestTxHash(undefined);
@@ -204,16 +205,17 @@ export function AtmofiDapp() {
         }}>Create Another Derivative</button>
     </div>
   );
-  
-  // Notice this function now accepts the props it needs
-  const renderTransactionStatus = ({ isSuccess, txError }: { isSuccess: boolean, txError: Error | null }) => (
+
+const renderTransactionStatus = () => (
     <div className="tx-status">
       {isPending && <p>Please confirm the transaction in your wallet...</p>}
       {isTxLoading && <p>Waiting for confirmation on the blockchain...</p>}
+      
+      {/* THIS LINE IS CORRECTED */}
       {latestTxHash && !isPending && !isTxLoading && <p>Last Transaction: <a href={`https://sepolia.etherscan.io/tx/${latestTxHash}`} target="_blank" rel="noopener noreferrer">{latestTxHash.substring(0,10)}...</a></p>}
-      {isSuccess && receipt?.status === 'success' && <p>✅ Transaction was successful!</p>}
-      {isSuccess && receipt?.status === 'reverted' && <p>❌ Transaction reverted.</p>}
-      {txError && <p className="error-message">Error: {txError.message.split('(')[0]}</p>}
+      
+      {isTxSuccess && receipt?.status === 'success' && <p>✅ Transaction was successful!</p>}
+      {isTxSuccess && receipt?.status === 'reverted' && <p>❌ Transaction reverted.</p>}
     </div>
   );
 
@@ -222,16 +224,11 @@ export function AtmofiDapp() {
       {view === 'CREATION' && renderCreationView()}
       {view === 'FUNDING' && renderFundingView()}
       {view === 'SETTLEMENT_PENDING' && renderSettlementView()}
+      {view === 'AWAITING_RANDOMNESS' && renderAwaitingRandomnessView()}
       {view === 'POST_SETTLEMENT' && renderPostSettlementView()}
-      
-      {/* And here we pass the props into the function call */}
-      {renderTransactionStatus({ isSuccess: isTxSuccess, txError })}
-      
+      {renderTransactionStatus()}
       <HistoryTable 
-        history={history || []} 
         txHistory={txHistory} 
-        isLoading={isHistoryLoading} 
-        error={historyError} 
       />
     </div>
   );
