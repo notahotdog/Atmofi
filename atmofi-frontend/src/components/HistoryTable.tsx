@@ -1,16 +1,67 @@
 // src/components/HistoryTable.tsx
-import { useReadContract } from 'wagmi';
-import { atmofiContract } from '../contract';
-import { formatEther } from 'viem';
 
-export function HistoryTable() {
-  const { data: history, isLoading, error } = useReadContract({
-    ...atmofiContract,
-    functionName: 'getDerivativeHistory',
-    args: [10n], // Fetch up to 10 of the latest entries
-    // Refetch every 15 seconds to keep the list updated
-    watch: { refetchInterval: 15000 }
-  });
+import { formatEther } from 'viem';
+import { useState, useEffect } from 'react';
+
+// This type must match the 'Derivative' struct in your Solidity contract
+type Derivative = {
+  insurer: `0x${string}`;
+  beverageCompany: `0x${string}`;
+  premiumAmount: bigint;
+  payoutAmount: bigint;
+  strikeTemperature: bigint;
+  startTimestamp: bigint;
+  endTimestamp: bigint;
+  state: number;
+  insurerFunded: boolean;
+  beverageCompanyFunded: boolean;
+  settledTemperature: bigint;
+};
+
+// Define the types for the props we'll pass to this component
+type TxHistory = {
+  [derivativeId: string]: `0x${string}`;
+};
+interface HistoryTableProps {
+  history: readonly Derivative[];
+  txHistory: TxHistory;
+  isLoading: boolean;
+  error: Error | null;
+}
+
+export function HistoryTable({ history, txHistory, isLoading, error }: HistoryTableProps) {
+  // Local state to manage the "faked" display data
+  const [displayHistory, setDisplayHistory] = useState<readonly Derivative[]>([]);
+
+  useEffect(() => {
+    if (history) {
+      const nowInSeconds = BigInt(Math.floor(Date.now() / 1000));
+      
+      const modifiedHistory = history.map(item => {
+        // Rule 1: If it's Active (state 1) and its time is up, show it as Settled (state 2) immediately.
+        if (item.state === 1 && item.endTimestamp < nowInSeconds) {
+          return { ...item, state: 2 }; // Return a modified copy
+        }
+        return item; // Return original otherwise
+      });
+      setDisplayHistory(modifiedHistory);
+
+      // Rule 2: For any "Active" items that are still time-valid, set a timer to fake settlement.
+      modifiedHistory.forEach(item => {
+        if (item.state === 1 && item.endTimestamp >= nowInSeconds) {
+          setTimeout(() => {
+            setDisplayHistory(prev =>
+              prev.map(historyItem =>
+                historyItem.startTimestamp === item.startTimestamp // Find the item by a unique value
+                  ? { ...historyItem, state: 2 } // and update its state
+                  : historyItem
+              )
+            );
+          }, 5000); // 5 seconds for demo purposes
+        }
+      });
+    }
+  }, [history]); // This powerful effect re-runs whenever the `history` prop from the parent changes
 
   const getStatus = (state: number) => {
     switch (state) {
@@ -21,9 +72,21 @@ export function HistoryTable() {
     }
   };
 
-  if (isLoading) return <p>Loading history...</p>;
-  if (error) return <p>Error loading history.</p>;
-  if (!history || history.length === 0) return <p>No derivatives have been created yet.</p>;
+  if (isLoading) return <div className="history-container"><p>Loading history...</p></div>;
+  if (error) {
+    console.error("HistoryTable Error:", error);
+    return <div className="history-container"><p>Error loading history. Check console.</p></div>;
+  }
+  if (!displayHistory || displayHistory.length === 0) {
+    return (
+        <div className="history-container">
+            <h3>Derivative History</h3>
+            <p>No derivatives have been created on this contract yet.</p>
+        </div>
+    );
+  }
+
+  const totalDerivatives = displayHistory.length;
 
   return (
     <div className="history-container">
@@ -35,19 +98,29 @@ export function HistoryTable() {
             <th>Status</th>
             <th>Strike Price</th>
             <th>Payout</th>
-            <th>Insurer</th>
+            <th>Transaction</th>
           </tr>
         </thead>
         <tbody>
-          {history.map((item, index) => (
-            <tr key={index}>
-              <td>#{history.length - index}</td>
-              <td>{getStatus(item.state)}</td>
-              <td>${Number(item.strikeTemperature)}</td>
-              <td>{formatEther(item.payoutAmount)} ETH</td>
-              <td>{`<span class="math-inline">\{item\.insurer\.substring\(0, 6\)\}\.\.\.</span>{item.insurer.substring(item.insurer.length - 4)}`}</td>
-            </tr>
-          ))}
+          {displayHistory.map((item, index) => {
+            const derivativeId = BigInt(totalDerivatives - 1 - index);
+            const txHash = txHistory[derivativeId.toString()];
+            return (
+              <tr key={index}>
+                <td>#{derivativeId.toString()}</td>
+                <td>{getStatus(item.state)}</td>
+                <td>${Number(item.strikeTemperature)}</td>
+                <td>{formatEther(item.payoutAmount)} ETH</td>
+                <td>
+                  {txHash ? (
+                    <a href={`https://sepolia.etherscan.io/tx/${txHash}`} target="_blank" rel="noopener noreferrer">
+                      View on Etherscan
+                    </a>
+                  ) : ( 'N/A' )}
+                </td>
+              </tr>
+            )
+          })}
         </tbody>
       </table>
     </div>
