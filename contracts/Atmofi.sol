@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 import "@chainlink/contracts/src/v0.8/vrf/VRFConsumerBaseV2.sol";
 import "@chainlink/contracts/src/v0.8/vrf/interfaces/VRFCoordinatorV2Interface.sol";
+import "@chainlink/contracts/src/v0.8/automation/AutomationCompatible.sol";
 
-contract Atmofi is VRFConsumerBaseV2 {
+contract Atmofi is VRFConsumerBaseV2, AutomationCompatibleInterface, Ownable {
     
     enum DerivativeState { Pending, Funded, Settled }
 
@@ -33,9 +35,9 @@ contract Atmofi is VRFConsumerBaseV2 {
     
     VRFCoordinatorV2Interface private immutable i_vrfCoordinator;
     bytes32 private immutable i_keyHash;
-    uint256 private immutable i_subscriptionId;
+    uint256 public s_subscriptionId;
     
-    uint32 private constant CALLBACK_GAS_LIMIT = 100000;
+    uint32 private constant CALLBACK_GAS_LIMIT = 200000;
     uint16 private constant REQUEST_CONFIRMATIONS = 3;
     uint32 private constant NUM_WORDS = 1;
 
@@ -47,15 +49,18 @@ contract Atmofi is VRFConsumerBaseV2 {
     event RandomnessRequested(uint256 indexed requestId, uint256 indexed derivativeId);
     event ContractSettled(uint256 indexed derivativeId, address indexed winner, uint256 settledTemperature);
 
-    constructor(address _priceFeedAddress, uint256 _vrfSubscriptionId) 
+    constructor(address _priceFeedAddress) 
         VRFConsumerBaseV2(0x8103B0A8A00be2DDC778e6e7eaa21791Cd364625)
+        Ownable(msg.sender)
     {
         priceFeed = AggregatorV3Interface(_priceFeedAddress);
         priceFeedContractAddress = _priceFeedAddress;
-        
         i_vrfCoordinator = VRFCoordinatorV2Interface(0x8103B0A8A00be2DDC778e6e7eaa21791Cd364625);
         i_keyHash = 0x474e34a077df58807dbe9c96d3c009b23b3c6d0cce433e59bbf5b34f823bc56c;
-        i_subscriptionId = _vrfSubscriptionId;
+    }
+
+    function setSubscriptionId(uint256 _subId) external onlyOwner {
+        s_subscriptionId = _subId;
     }
 
     function initialize(address beverageCompany, uint256 payoutAmount, uint256 strikeTemperature, uint256 durationSeconds) external payable {
@@ -90,16 +95,17 @@ contract Atmofi is VRFConsumerBaseV2 {
         emit ContractFunded(derivativeId);
     }
 
-    function settleContract(uint256 derivativeId) external {
+    function settleContract(uint256 derivativeId) public {
         Derivative storage derivative = derivatives[derivativeId];
         require(derivative.state == DerivativeState.Funded, "Derivative not active");
         require(block.timestamp > derivative.endTimestamp, "Contract period not yet ended");
         require(!derivativeSettlementInitiated[derivativeId], "Settlement already initiated");
+        require(s_subscriptionId != 0, "Subscription ID not set");
         derivativeSettlementInitiated[derivativeId] = true;
         
         uint256 requestId = i_vrfCoordinator.requestRandomWords(
             i_keyHash, 
-            uint64(i_subscriptionId), // Explicitly cast to uint64 for the function call
+            uint64(s_subscriptionId), // Explicitly cast to uint64 for the function call
             REQUEST_CONFIRMATIONS, 
             CALLBACK_GAS_LIMIT, 
             NUM_WORDS
@@ -133,14 +139,27 @@ contract Atmofi is VRFConsumerBaseV2 {
         emit ContractSettled(derivativeId, winner, finalTemperature);
     }
 
+    function checkUpkeep(bytes calldata _checkData) external view override returns (bool upkeepNeeded, bytes memory performData) {
+        for (uint i = 0; i < allDerivativeIds.length; i++) {
+            uint256 derivativeId = allDerivativeIds[i];
+            Derivative memory derivative = derivatives[derivativeId];
+            if (derivative.state == DerivativeState.Funded && block.timestamp > derivative.endTimestamp && !derivativeSettlementInitiated[derivativeId]) {
+                upkeepNeeded = true;
+                performData = abi.encode(derivativeId);
+                break;
+            }
+        }
+    }
+
+    function performUpkeep(bytes calldata performData) external override {
+        uint256 derivativeId = abi.decode(performData, (uint256));
+        settleContract(derivativeId);
+    }
+
     function getDerivativeHistory(uint256 limit) external view returns (Derivative[] memory) {
         uint256 count = allDerivativeIds.length;
-        if (count == 0) {
-            return new Derivative[](0);
-        }
-        if (limit > count || limit == 0) {
-            limit = count;
-        }
+        if (count == 0) { return new Derivative[](0); }
+        if (limit > count || limit == 0) { limit = count; }
         Derivative[] memory history = new Derivative[](limit);
         for (uint256 i = 0; i < limit; i++) {
             history[i] = derivatives[allDerivativeIds[count - 1 - i]];
