@@ -1,0 +1,56 @@
+/* Add to the bottom of src/App.css */
+.App-main {
+  padding: 40px 20px;
+  /* ADD THESE THREE LINES TO CENTER THE CONTENT */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.contract-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  max-width: 500px;
+  margin: 20px auto;
+  padding: 20px;
+  background-color: #282c34;
+  border-radius: 8px;
+}
+
+.contract-form input {
+  padding: 10px;
+  border-radius: 4px;
+  border: 1px solid #444;
+  background-color: #333;
+  color: white;
+  font-size: 1rem;
+}
+
+.contract-form button {
+  background-color: #61dafb;
+  color: #282c34;
+  border: none;
+  padding: 12px;
+  border-radius: 5px;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.contract-form button:disabled {
+  background-color: #555;
+  cursor: not-allowed;
+}
+
+.dapp-container {
+  /* This will center all the text inside the container */
+  text-align: center;
+  width: 100%;
+  max-width: 550px; /* Give it a max width so it doesn't stretch too wide on big screens */
+}
+
+/* We also want the form itself to align its labels/inputs to the left for readability */
+.contract-form {
+  text-align: left; 
+}
