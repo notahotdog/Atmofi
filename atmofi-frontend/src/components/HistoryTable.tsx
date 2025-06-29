@@ -3,20 +3,7 @@
 import { formatEther } from 'viem';
 import { useState, useEffect } from 'react';
 
-// This type must match the 'Derivative' struct in your Solidity contract
-type Derivative = {
-  insurer: `0x${string}`;
-  beverageCompany: `0x${string}`;
-  premiumAmount: bigint;
-  payoutAmount: bigint;
-  strikeTemperature: bigint;
-  startTimestamp: bigint;
-  endTimestamp: bigint;
-  state: number;
-  insurerFunded: boolean;
-  beverageCompanyFunded: boolean;
-  settledTemperature: bigint;
-};
+import type { Derivative } from '../types/derivative';
 
 // Define the types for the props we'll pass to this component
 type TxHistory = {
