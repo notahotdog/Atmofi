@@ -8,12 +8,21 @@ body {
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
   margin: 0;
-  padding: 40px 20px; /* Add some padding to the body so the container isn't glued to the edge */
+  padding: 0;
+  width: 100vw;
+  /* padding: 40px 20px; Add some padding to the body so the container isn't glued to the edge */
+}
+
+.main-content {
+  max-width: 1300px;
+  margin: 0 auto;
+  padding: 0 20px;
+  box-sizing: border-box;
 }
 
 /* This is our new main container for the whole app */
 .App-container {
-  max-width: 650px; /* Set a max width for our app's content */
+  /* max-width: 650px; Set a max width for our app's content */
   margin: 0 auto;  /* The classic 'auto' left/right margin centers the block */
   background-color: #20232a; /* A slightly different background to distinguish the container */
   border-radius: 12px;
@@ -44,8 +53,11 @@ body {
 /* All the other styles for dapp-container, form, etc., remain the same */
 .dapp-container {
   text-align: center;
-  width: 100%;
-  max-width: 550px;
+    width: 100%;                 /* Use full width of parent, not the viewport */
+  max-width: 1200px;           /* Set a sensible max width */
+  margin: 0 auto;              /* Center it */
+  box-sizing: border-box;
+  padding: 20px;
 }
 
 .contract-form {
@@ -146,13 +158,33 @@ body {
   color: #ff6b6b;
 }
 
-.history-container {
+/* .history-wrapper {
   width: 100%;
-  max-width: 650px;
   margin-top: 40px;
   padding: 20px;
+} */
+ .history-wrapper {
+  width: 100%;
+  max-width: 1200px;
+  margin: 40px auto;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+
+.history-container {
+  width: 100%;
+  max-width: 100%;
+  margin-top: 40px;
+  overflow-x: auto;
+  /*Enablescrollifneeded*/padding: 20px;
   background-color: #282c34;
   border-radius: 8px;
+  -webkit-border-radius: 8px;
+  -moz-border-radius: 8px;
+  8px-ms-border-radius: 8px;
+  -o-border-radius: 8px;
+  -ms-border-radius: 8px;
 }
 
 .history-table {
@@ -173,4 +205,18 @@ body {
 
 .history-table tbody tr:last-child td {
   border-bottom: none;
+}
+
+
+/* Ensure TempMap fills the space */
+.right-column {
+  min-height: 400px;
+  position: relative;
+}
+
+/* Make sure the Leaflet map itself has full size */
+.leaflet-container {
+  width: 100%;
+  height: 100%;
+  z-index: 0;
 }
