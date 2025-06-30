@@ -229,14 +229,14 @@ const handleSearch = async () => {
       </div>
       <form onSubmit={createDerivative} className="contract-form">
         <h4>Create New Derivative</h4>
-        <input name="beverageCo" placeholder="Beverage Co. Address (0x...)" value={beverageCo} onChange={(e) => setBeverageCo(e.target.value)} required />
+        <input name="beverageCo" placeholder="Derivative buyer. Address (0x...)" value={beverageCo} onChange={(e) => setBeverageCo(e.target.value)} required />
         <input name="premium" placeholder="Premium (e.g., 0.01 ETH)" value={premium} onChange={(e) => setPremium(e.target.value)} required />
         <input name="payout" placeholder="Payout (e.g., 0.1 ETH)" value={payout} onChange={(e) => setPayout(e.target.value)} required />
         <input name="strike" placeholder="Strike Price (e.g., 2600)" value={strike} onChange={(e) => setStrike(e.target.value)} required />
         <div className="outcome-preview">
           <h5>Potential Outcome Preview</h5>
           {strike && premium && payout && livePrice > 0 ? ( livePrice < Number(strike) ?
-              (<p>🟢 Current conditions favor the <strong>Beverage Company</strong>.</p>) :
+              (<p>🟢 Current conditions favor the <strong>Derivative buyer</strong>.</p>) :
               (<p>🔴 Current conditions favor the <strong>Insurer</strong>.</p>)
           ) : <p>Enter all values to see a preview.</p>}
         </div>
